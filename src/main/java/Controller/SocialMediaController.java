@@ -34,6 +34,13 @@ public class SocialMediaController {
         app.post("/register", this::registerHandler);
         app.post("/login", this::loginHandler);
 
+        app.post("/messages", this::postMessagesHandler);
+        app.get("/messages", this::getAllMessagesHandler);
+        app.get("/messages/{message_id}", this::getMessagesHandler);
+        app.delete("/messages/{message_id}", this::deleteMessagesHandler);
+        app.patch("/messages/{message_id}", this::updateMessagesHandler);
+        app.get("/accounts/{account_id}/messages", this::getAllMessagesFromUserHandler);
+
         return app;
     }
 
@@ -79,5 +86,69 @@ public class SocialMediaController {
         } catch (Exception e) {
             context.status(401);
         }
+    }
+
+    private void postMessagesHandler(Context context) {
+        ObjectMapper mapper = new ObjectMapper();
+        try {
+            Message message = mapper.readValue(context.body(), Message.class);
+            Message addedMessage = this.messageService.creatMessage(message);
+
+            if (addedMessage != null) {
+                context.json(mapper.writeValueAsString(addedMessage));
+                context.status(200);
+            } else {
+                context.status(400);
+            }
+        } catch (Exception e) {
+            context.status(400);
+        }
+    }
+
+    private void getAllMessagesHandler(Context context) {
+        context.json(this.messageService.getAllMessages());
+    }
+
+    private void getMessagesHandler(Context context) {
+        int message_id = Integer.parseInt(context.pathParam("message_id"));
+        Message message = this.messageService.getMessage(message_id);
+        if (message != null) {
+            context.json(message);
+        }
+    }
+
+    private void deleteMessagesHandler(Context context) {
+        int message_id = Integer.parseInt(context.pathParam("message_id"));
+        Message message = this.messageService.deleteMessage(message_id);
+        if (message != null) {
+            ObjectMapper mapper = new ObjectMapper();
+            try {
+                context.json(mapper.writeValueAsString(message));
+            } catch (Exception e) {
+                System.out.println(e.getMessage());
+            }
+        }
+    }
+
+    private void updateMessagesHandler(Context context) {
+        int message_id = Integer.parseInt(context.pathParam("message_id"));
+
+        ObjectMapper mapper = new ObjectMapper();
+        try {
+            Message partialMessage = mapper.readValue(context.body(), Message.class);
+            Message message = this.messageService.updateMessage(message_id, partialMessage.getMessage_text());
+            if (message != null) {
+                context.json(mapper.writeValueAsString(message));
+            } else {
+                context.status(400);
+            }
+        } catch (Exception e) {
+            context.status(400);
+        }
+    }
+
+    private void getAllMessagesFromUserHandler(Context context) {
+        int account_id = Integer.parseInt(context.pathParam("account_id"));
+        context.json(this.messageService.getAllMessagesFromUser(account_id));
     }
 }
